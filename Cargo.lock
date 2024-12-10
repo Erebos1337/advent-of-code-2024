@@ -72,10 +72,16 @@ dependencies = [
 [[package]]
 name = "day09"
 version = "0.1.0"
+dependencies = [
+ "utils",
+]
 
 [[package]]
 name = "day10"
 version = "0.1.0"
+dependencies = [
+ "utils",
+]
 
 [[package]]
 name = "day11"
