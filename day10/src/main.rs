@@ -20,8 +20,8 @@ fn main() {
     let solution2: u32 = solve2(&input);
 
     println!("day 10");
-    println!("  - part 1: {}", solution1); // 514
-    println!("  - part 2: {}", solution2); //
+    println!("  - part 1: {}", solution1); //  514
+    println!("  - part 2: {}", solution2); // 1162
 }
 
 fn collect_neighbors_with_value(
