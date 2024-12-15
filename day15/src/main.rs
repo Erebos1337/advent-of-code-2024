@@ -300,12 +300,13 @@ fn move_down_wide(grid: &mut Box<[Box<[char]>]>, x: usize, y: usize) -> (usize, 
 
             should_move = true;
         }
-    } else if grid[new_y][x] == ']' {
-        if can_move_down(grid, x, new_y) && can_move_down(grid, x - 1, new_y) {
-            push_down(grid, x, y);
+    } else if grid[new_y][x] == ']'
+        && can_move_down(grid, x, new_y)
+        && can_move_down(grid, x - 1, new_y)
+    {
+        push_down(grid, x, y);
 
-            should_move = true;
-        }
+        should_move = true;
     }
 
     if should_move {
@@ -384,12 +385,13 @@ fn move_up_wide(grid: &mut Box<[Box<[char]>]>, x: usize, y: usize) -> (usize, us
 
             should_move = true;
         }
-    } else if grid[new_y][x] == ']' {
-        if can_move_up(grid, x, new_y) && can_move_up(grid, x - 1, new_y) {
-            push_up(grid, x, y);
+    } else if grid[new_y][x] == ']'
+        && can_move_up(grid, x, new_y)
+        && can_move_up(grid, x - 1, new_y)
+    {
+        push_up(grid, x, y);
 
-            should_move = true;
-        }
+        should_move = true;
     }
 
     if should_move {
