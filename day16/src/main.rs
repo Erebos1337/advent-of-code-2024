@@ -1,6 +1,9 @@
-use std::str::Lines;
+use std::{
+    str::Lines,
+    time::{Duration, Instant},
+};
 
-use utils::grid::print_char_grid;
+use min_max_heap::MinMaxHeap;
 
 const RIGHT: usize = 0;
 const DOWN: usize = 1;
@@ -47,16 +50,18 @@ fn solve1(
     height: usize,
     start: (usize, usize),
     end: (usize, usize),
-) -> u32 {
+) -> (u32, Duration) {
+    let now = Instant::now();
     let mut visited: Box<[Box<[[u32; 4]]>]> =
-        vec![vec![[u32::MAX, u32::MAX, u32::MAX, u32::MAX]; width].into_boxed_slice(); height].into_boxed_slice();
-    let mut queue: Vec<(u32, (usize, usize), usize)> = Vec::new();
+        vec![vec![[u32::MAX, u32::MAX, u32::MAX, u32::MAX]; width].into_boxed_slice(); height]
+            .into_boxed_slice();
+    let mut queue: MinMaxHeap<(u32, (usize, usize), usize)> = MinMaxHeap::new();
 
     let mut min_cost = u32::MAX;
     queue.push((0, start, RIGHT));
 
     while !queue.is_empty() {
-        let (cost, (x, y), direction) = queue.pop().unwrap();
+        let (cost, (x, y), direction) = queue.pop_min().unwrap();
         if (x, y) == end {
             if cost < min_cost {
                 min_cost = cost;
@@ -103,8 +108,8 @@ fn solve1(
         };
         queue.push((cost + 1000, (x, y), ccw_direction));
     }
-
-    return min_cost;
+    let elapsed = now.elapsed();
+    (min_cost, elapsed)
 }
 
 fn main() {
@@ -112,10 +117,10 @@ fn main() {
 
     let (grid, width, height) = read_map(&mut input);
 
-    print_char_grid(&grid);
     let (start, end) = find_start_end(&grid, width, height);
 
-    let solution1 = solve1(&grid, width, height, start, end);
+    let (solution1, duration1) = solve1(&grid, width, height, start, end);
+
     println!("day 16");
-    println!("  - part 1: {}", solution1); // 122492
+    println!("  - part 1: {} {:?}", solution1, duration1); // 122492
 }
