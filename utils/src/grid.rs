@@ -19,3 +19,7 @@ pub fn print_char_grid_mark(grid: &[Box<[char]>], (mx, my): (usize, usize)) {
         println!();
     }
 }
+
+pub fn make_grid<T: Clone>(width: usize, height: usize, default: T) -> Box<[Box<[T]>]> {
+    vec![vec![default; width].into_boxed_slice(); height].into_boxed_slice()
+}
