@@ -134,6 +134,9 @@ dependencies = [
 [[package]]
 name = "day18"
 version = "0.1.0"
+dependencies = [
+ "min-max-heap",
+]
 
 [[package]]
 name = "day19"
