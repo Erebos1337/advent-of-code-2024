@@ -1,6 +1,8 @@
 use std::{
+    collections::HashSet,
     str::Lines,
     time::{Duration, Instant},
+    u64,
 };
 
 use regex::Regex;
@@ -27,34 +29,28 @@ fn read_instructions(lines: &mut Lines) -> Box<[u8]> {
         .unwrap()
         .split(',')
         .map(|s| s.parse().unwrap())
-        .collect::<Vec<u8>>()
-        .into_boxed_slice()
+        .collect()
 }
 
-fn solve1(registers: &[u64; 3], instructions: &[u8]) -> (String, Duration) {
+fn combo(&registers: &[u64; 3], operand: u8) -> u64 {
+    match operand {
+        0..=3 => operand as u64,
+        4 => registers[0],
+        5 => registers[1],
+        6 => registers[2],
+        _ => 0,
+    }
+}
+
+fn run_program(registers: &[u64; 3], instructions: &Box<[u8]>) -> Box<[u8]> {
     // Combo operands 0 through 3 represent literal values 0 through 3.
     // Combo operand 4 represents the value of register A.
     // Combo operand 5 represents the value of register B.
     // Combo operand 6 represents the value of register C.
     // Combo operand 7 is reserved and will not appear in valid programs.
-
-    let start = Instant::now();
-
-    let mut output: Vec<u64> = Vec::new();
-
     let mut registers = *registers;
+    let mut output: Vec<u8> = Vec::new();
     let mut ptr = 0usize;
-
-    fn combo(&registers: &[u64; 3], operand: u8) -> u64 {
-        match operand {
-            0..=3 => operand as u64,
-            4 => registers[0],
-            5 => registers[1],
-            6 => registers[2],
-            _ => 0,
-        }
-    }
-
     while ptr < instructions.len() {
         match instructions[ptr] {
             // The adv instruction (opcode 0) performs division.
@@ -63,7 +59,7 @@ fn solve1(registers: &[u64; 3], instructions: &[u8]) -> (String, Duration) {
             // (So, an operand of 2 would divide A by 4 (2^2); an operand of 5 would divide A by 2^B.)
             // The result of the division operation is truncated to an integer and then written to the A register.
             0 => {
-                registers[0] /= 1 << combo(&&registers, instructions[ptr + 1]);
+                registers[0] = registers[0] >> combo(&&registers, instructions[ptr + 1]);
                 ptr += 2;
             }
             // The bxl instruction (opcode 1) calculates the bitwise XOR of register B and the instruction's literal operand, then stores the result in register B.
@@ -95,19 +91,19 @@ fn solve1(registers: &[u64; 3], instructions: &[u8]) -> (String, Duration) {
             // The out instruction (opcode 5) calculates the value of its combo operand modulo 8, then outputs that value.
             // (If a program outputs multiple values, they are separated by commas.)
             5 => {
-                output.push(combo(&&registers, instructions[ptr + 1]) % 8);
+                output.push((combo(&&registers, instructions[ptr + 1]) % 8) as u8);
                 ptr += 2;
             }
             // The bdv instruction (opcode 6) works exactly like the adv instruction except that the result is stored in the B register.
             // (The numerator is still read from the A register.)
             6 => {
-                registers[1] = registers[0] / (1 << combo(&&registers, instructions[ptr + 1]));
+                registers[1] = registers[0] >> combo(&&registers, instructions[ptr + 1]);
                 ptr += 2;
             }
             // The cdv instruction (opcode 7) works exactly like the adv instruction except that the result is stored in the C register.
             // (The numerator is still read from the A register.)
             7 => {
-                registers[2] = registers[0] / (1 << combo(&&registers, instructions[ptr + 1]));
+                registers[2] = registers[0] >> combo(&&registers, instructions[ptr + 1]);
                 ptr += 2;
             }
             _ => {
@@ -115,6 +111,13 @@ fn solve1(registers: &[u64; 3], instructions: &[u8]) -> (String, Duration) {
             }
         }
     }
+    output.into_boxed_slice()
+}
+
+fn solve1(registers: &[u64; 3], instructions: &Box<[u8]>) -> (String, Duration) {
+    let start = Instant::now();
+
+    let output = run_program(registers, &instructions);
 
     let solution: String = output
         .iter()
@@ -124,14 +127,49 @@ fn solve1(registers: &[u64; 3], instructions: &[u8]) -> (String, Duration) {
     (solution, start.elapsed())
 }
 
+fn solve2(registers: &[u64; 3], instructions: &Box<[u8]>) -> (u64, Duration) {
+    let start = Instant::now();
+    let mut suffixes: HashSet<u64> = HashSet::from([0]);
+    for i in 0..16 {
+        let shift = i * 3;
+        let match_length = i + 1;
+        let mut new_suffixes: HashSet<u64> = HashSet::new();
+        for suffix in &suffixes {
+            for j in 0..1 << 18 {
+                let new_num = suffix + (j << shift);
+                let mut new_registers = *registers;
+                new_registers[0] = new_num;
+                let output = run_program(&new_registers, instructions);
+                if output.len() >= match_length
+                    && output.len() <= instructions.len()
+                    && output[0..match_length] == instructions[0..match_length]
+                {
+                    new_suffixes.insert(new_num & ((1 << match_length * 3) - 1));
+                }
+            }
+        }
+        suffixes = new_suffixes;
+    }
+    let mut min = u64::MAX;
+    for suffix in suffixes {
+        if suffix < min {
+            min = suffix;
+        }
+    }
+
+    (min, start.elapsed())
+}
+
 fn main() {
     let mut input = include_str!("../input.txt").lines();
 
     let registers: [u64; 3] = read_registers(&mut input);
-    let instructions: &[u8] = &read_instructions(&mut input);
+    let instructions: Box<[u8]> = read_instructions(&mut input);
 
     let (solution1, _) = solve1(&registers, &instructions);
+    let (solution2, _) = solve2(&registers, &instructions);
 
     println!("day 17");
     println!("  - part 1: {}", solution1); // 2,7,4,7,2,1,7,5,1
+    println!("  - part 2: {}", solution2); // 37221274271220
 }
