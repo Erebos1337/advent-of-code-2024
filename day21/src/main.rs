@@ -3,77 +3,16 @@ use std::collections::HashMap;
 use cached::proc_macro::cached;
 
 #[cached]
-fn press_keys_directional(keys: String) -> String {
-    let mut pressed_keys = String::new();
-
-    let grid = [
-        ['#', '^', 'A'], // first row
-        ['<', 'v', '>'], // second row
-    ];
-
-    let (mut curr_x, mut curr_y) = (2usize, 0usize);
-    for key in keys.chars() {
-        match key {
-            '^' => {
-                curr_y -= 1;
-            }
-            'v' => {
-                curr_y += 1;
-            }
-            '<' => {
-                curr_x -= 1;
-            }
-            '>' => {
-                curr_x += 1;
-            }
-            'A' => {
-                pressed_keys.push(grid[curr_y][curr_x]);
-            }
-            _ => panic!("Invalid key: {}", key),
-        }
-    }
-
-    pressed_keys
-}
-
-#[cached]
-fn press_keys_numeric(keys: String) -> String {
-    let mut pressed_keys = String::new();
-
-    let grid = [
-        ['7', '8', '9'],
-        ['4', '5', '6'],
-        ['1', '2', '3'],
-        ['#', '0', 'A'],
-    ];
-
-    let (mut curr_x, mut curr_y) = (2usize, 3usize);
-    for key in keys.chars() {
-        match key {
-            '^' => {
-                curr_y -= 1;
-            }
-            'v' => {
-                curr_y += 1;
-            }
-            '<' => {
-                curr_x -= 1;
-            }
-            '>' => {
-                curr_x += 1;
-            }
-            'A' => {
-                pressed_keys.push(grid[curr_y][curr_x]);
-            }
-            _ => panic!("Invalid key: {}", key),
-        }
-    }
-
-    pressed_keys
-}
-
-#[cached]
 fn key_pos_numeric(key: char) -> (usize, usize) {
+    // +---+---+---+
+    // | 7 | 8 | 9 |
+    // +---+---+---+
+    // | 4 | 5 | 6 |
+    // +---+---+---+
+    // | 1 | 2 | 3 |
+    // +---+---+---+
+    //     | 0 | A |
+    //     +---+---+
     match key {
         '0' => (1, 3),
         '1' => (0, 2),
@@ -92,6 +31,11 @@ fn key_pos_numeric(key: char) -> (usize, usize) {
 
 #[cached]
 fn key_pos_directional(key: char) -> (usize, usize) {
+    //     +---+---+
+    //     | ^ | A |
+    // +---+---+---+
+    // | < | v | > |
+    // +---+---+---+
     match key {
         '^' => (1, 0),
         'A' => (2, 0),
@@ -104,7 +48,7 @@ fn key_pos_directional(key: char) -> (usize, usize) {
 
 #[cached]
 fn get_key_paths_numeric() -> HashMap<(char, char), Vec<String>> {
-    let key_options: [char; 11] = ['7', '8', '9', '4', '5', '6', '1', '2', '3', '0', 'A'];
+    let key_options: [char; 11] = ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A'];
 
     let mut sub_paths: HashMap<(char, char), Vec<String>> =
         HashMap::<(char, char), Vec<String>>::new();
@@ -193,109 +137,92 @@ fn get_key_paths_directional() -> HashMap<(char, char), Vec<String>> {
 }
 
 #[cached]
-fn get_chars(code: String) -> Box<[char]> {
-    code.chars().collect()
-}
-
-#[cached]
-fn get_char_at(code: String, ptr: usize) -> char {
-    get_chars(code)[ptr]
-}
-
-fn build_all_paths(
-    code: Box<[char]>,
-    ptr: usize,
-    key_paths: &HashMap<(char, char), Vec<String>>,
-) -> Vec<String> {
-    if ptr == code.len() {
-        return vec!["".to_string()];
-    }
-    let mut all_paths: Vec<String> = vec![];
-
-    let curr_char = if ptr > 0 { code[ptr - 1] } else { 'A' };
-    let next_char = code[ptr];
-
-    let suffixes = build_all_paths(code, ptr + 1, key_paths);
-    let prefixes = key_paths.get(&(curr_char, next_char)).unwrap();
-
-    for prefix in prefixes {
-        for suffix in &suffixes {
-            all_paths.push([prefix.clone(), suffix.clone()].concat());
-        }
+fn solve_dfs_directional(from: char, to: char, depth: usize) -> usize {
+    if from == to {
+        return 1;
     }
 
-    all_paths
-}
+    let key_paths = get_key_paths_directional();
+    let paths = &key_paths[&(from, to)];
 
-#[cached]
-fn build_all_paths_directional(code: Box<[char]>, ptr: usize) -> Vec<String> {
-    build_all_paths(code, ptr, &get_key_paths_directional())
-}
-
-#[cached]
-fn build_all_paths_numeric(code: Box<[char]>, ptr: usize) -> Vec<String> {
-    build_all_paths(code, ptr, &get_key_paths_numeric())
-}
-
-fn shortest_paths_numeric(my_code: String) -> Vec<String> {
-    let mut shortest_path_length = usize::MAX;
-    let mut shortest_paths: Vec<String> = vec![];
-
-    let all_paths = build_all_paths_numeric(my_code.chars().collect(), 0);
-
-    for path in all_paths {
-        let path_length = path.len();
-        if path_length < shortest_path_length {
-            shortest_path_length = path_length;
-            shortest_paths.clear();
-            shortest_paths.push(path);
-        } else if path.len() == shortest_path_length {
-            shortest_paths.push(path);
-        }
-    }
-
-    shortest_paths
-}
-
-fn shortest_paths_directional(code: String, depth: u8) -> Vec<String> {
-    let my_codes: Vec<String> = if depth == 1 {
-        shortest_paths_numeric(code)
-    } else {
-        shortest_paths_directional(code, depth - 1)
-    };
-
-    let mut shortest_path_length = usize::MAX;
-    let mut shortest_paths: Vec<String> = vec![];
-
-    for my_code in my_codes {
-        let my_code_chars: Box<[char]> = my_code.chars().collect();
-        let all_paths = build_all_paths_directional(my_code_chars, 0);
-
-        for path in all_paths {
+    let mut min = usize::MAX;
+    if depth == 1 {
+        for path in paths {
             let path_length = path.len();
-            if path_length < shortest_path_length {
-                shortest_path_length = path_length;
-                shortest_paths.clear();
-                shortest_paths.push(path);
-            } else if path.len() == shortest_path_length {
-                shortest_paths.push(path);
+            if path_length < min {
+                min = path_length;
+            }
+        }
+    } else {
+        for path in paths {
+            let path_chars: Box<[char]> = path.chars().collect();
+            let mut total = 0;
+            let mut curr_char = 'A';
+            for i in 0..path_chars.len() {
+                let next_char = path_chars[i];
+                total += solve_dfs_directional(curr_char, next_char, depth - 1);
+                curr_char = next_char;
+            }
+            if total < min {
+                min = total;
             }
         }
     }
 
-    shortest_paths
+    min
 }
 
-fn solve1(codes: &[&str]) -> usize {
+#[cached]
+fn solve_dfs_numeric(from: char, to: char, depth: usize) -> usize {
+    if from == to {
+        return 1;
+    }
+
+    let key_paths = get_key_paths_numeric();
+    let paths = &key_paths[&(from, to)];
+
+    let mut min = usize::MAX;
+    for path in paths {
+        let path_chars: Box<[char]> = path.chars().collect();
+        let mut total = 0;
+        let mut curr_char = 'A';
+        for i in 0..path_chars.len() {
+            let next_char = path_chars[i];
+            total += solve_dfs_directional(curr_char, next_char, depth);
+            curr_char = next_char;
+        }
+        if total < min {
+            min = total;
+        }
+    }
+
+    min
+}
+
+fn solve_dfs(codes: &[&str], depth: usize) -> usize {
     let mut complexity = 0usize;
 
     for code in codes {
         let code_num = code.strip_suffix("A").unwrap().parse::<usize>().unwrap();
-        let sequences = shortest_paths_directional(code.to_string(), 2);
-        let sequence = &sequences[0];
-        complexity += sequence.len() * code_num;
+        let mut total = 0;
+        let code_chars: Box<[char]> = code.chars().collect();
+        let mut curr_char = 'A';
+        for i in 0..code_chars.len() {
+            let next_char = code_chars[i];
+            total += solve_dfs_numeric(curr_char, next_char, depth);
+            curr_char = next_char;
+        }
+        complexity += total * code_num;
     }
     complexity
+}
+
+fn solve1(codes: &[&str]) -> usize {
+    solve_dfs(codes, 2)
+}
+
+fn solve2(codes: &[&str]) -> usize {
+    solve_dfs(codes, 25)
 }
 
 fn main() {
@@ -303,7 +230,9 @@ fn main() {
     let codes: Box<[&str]> = input.lines().map(|s| s.trim()).collect();
 
     let solution1 = solve1(&codes);
+    let solution2 = solve2(&codes);
 
     println!("day 21");
     println!("  - part 1: {}", solution1); // 270084
+    println!("  - part 2: {}", solution2); // 329431019997766
 }
